@@ -11,22 +11,22 @@
 	let searchQuery = '';
 	let filterStatus: 'All' | 'Active' | 'Inactive' = 'All';
 	
-	let formData: Member = {
+	let formData: any = {
 		id: '',
 		name: '',
 		email: '',
 		phone: '',
 		address: '',
-		joinDate: new Date().toISOString().split('T')[0],
-		totalPoints: 0,
-		tierLevel: 'Bronze',
+		join_date: new Date().toISOString().split('T')[0],
+		total_points: 0,
+		tier_level: 'Bronze',
 		status: 'Active'
 	};
 	
 	$: filteredMembers = members.filter(member => {
-		const matchSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-		                   member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-		                   member.phone.includes(searchQuery);
+		const matchSearch = (member.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+		                   (member.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+		                   (member.phone || '').includes(searchQuery);
 		const matchStatus = filterStatus === 'All' || member.status === filterStatus;
 		return matchSearch && matchStatus;
 	});
@@ -62,9 +62,9 @@
 			email: '',
 			phone: '',
 			address: '',
-			joinDate: new Date().toISOString().split('T')[0],
-			totalPoints: 0,
-			tierLevel: 'Bronze',
+			join_date: new Date().toISOString().split('T')[0],
+			total_points: 0,
+			tier_level: 'Bronze',
 			status: 'Active'
 		};
 		showModal = true;
@@ -207,11 +207,11 @@
 							<td><strong>{member.name}</strong></td>
 							<td>{member.email}</td>
 							<td>{member.phone}</td>
-							<td>{formatDate(member.joinDate)}</td>
-							<td><strong>{member.totalPoints.toLocaleString('id-ID')}</strong></td>
+							<td>{formatDate(member.join_date)}</td>
+							<td><strong>{member.total_points.toLocaleString('id-ID')}</strong></td>
 							<td>
-								<span class="badge badge-{getTierColor(member.tierLevel)}">
-									{member.tierLevel}
+								<span class="badge badge-{getTierColor(member.tier_level)}">
+									{member.tier_level}
 								</span>
 							</td>
 							<td>
@@ -280,12 +280,12 @@
 				
 				<div class="form-group">
 					<label for="member-joindate">Tanggal Bergabung</label>
-					<input id="member-joindate" type="date" bind:value={formData.joinDate} required />
+					<input id="member-joindate" type="date" bind:value={formData.join_date} required />
 				</div>
 				
 				<div class="form-group">
 					<label for="member-tier">Tier Level</label>
-					<select id="member-tier" bind:value={formData.tierLevel}>
+					<select id="member-tier" bind:value={formData.tier_level}>
 						<option value="Bronze">Bronze</option>
 						<option value="Silver">Silver</option>
 						<option value="Gold">Gold</option>
