@@ -67,14 +67,14 @@ export const getMemberById = (req, res) => {
 // Create member
 export const createMember = (req, res) => {
   try {
-    const { id, name, email, phone, address, joinDate, tierLevel, status } = req.body;
+    const { id, name, email, phone, address, join_date, tier_level, status } = req.body;
     
     const stmt = db.prepare(`
       INSERT INTO members (id, name, email, phone, address, join_date, tier_level, status, total_points)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
     `);
     
-    stmt.run(id, name, email, phone, address, joinDate, tierLevel, status);
+    stmt.run(id, name, email, phone, address, join_date, tier_level, status);
     
     const newMember = db.prepare('SELECT * FROM members WHERE id = ?').get(id);
     
@@ -96,7 +96,7 @@ export const createMember = (req, res) => {
 export const updateMember = (req, res) => {
   try {
     const { id } = req.params;
-    const { name, email, phone, address, joinDate, tierLevel, status } = req.body;
+    const { name, email, phone, address, join_date, tier_level, status } = req.body;
     
     const stmt = db.prepare(`
       UPDATE members 
@@ -105,7 +105,7 @@ export const updateMember = (req, res) => {
       WHERE id = ?
     `);
     
-    const result = stmt.run(name, email, phone, address, joinDate, tierLevel, status, id);
+    const result = stmt.run(name, email, phone, address, join_date, tier_level, status, id);
     
     if (result.changes === 0) {
       return res.status(404).json({
