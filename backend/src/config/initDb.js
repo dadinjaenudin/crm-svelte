@@ -26,8 +26,12 @@ db.exec(`
     username TEXT UNIQUE NOT NULL,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
-    role TEXT DEFAULT 'admin',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    full_name TEXT,
+    role TEXT CHECK(role IN ('admin', 'staff', 'member')) DEFAULT 'staff',
+    status TEXT CHECK(status IN ('active', 'inactive')) DEFAULT 'active',
+    last_login DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
 
@@ -113,6 +117,29 @@ console.log('✅ Database tables created successfully');
 
 // Insert sample data
 console.log('🔄 Inserting sample data...');
+
+// Import bcrypt for password hashing
+import bcrypt from 'bcryptjs';
+
+// Sample Users (for authentication)
+const users = [
+  ['admin', 'admin@crm.com', bcrypt.hashSync('admin123', 10), 'Administrator', 'admin', 'active'],
+  ['staff1', 'staff@crm.com', bcrypt.hashSync('staff123', 10), 'Staff User', 'staff', 'active'],
+  ['member1', 'member@crm.com', bcrypt.hashSync('member123', 10), 'Member User', 'member', 'active']
+];
+
+const insertUser = db.prepare(`
+  INSERT INTO users (username, email, password, full_name, role, status)
+  VALUES (?, ?, ?, ?, ?, ?)
+`);
+
+users.forEach(user => {
+  try {
+    insertUser.run(...user);
+  } catch (error) {
+    console.log('User insert note:', error.message);
+  }
+});
 
 // Sample Members
 const members = [
@@ -202,10 +229,16 @@ redeemTransactions.forEach(txn => {
 console.log('✅ Sample data inserted successfully');
 console.log('');
 console.log('📊 Database Statistics:');
+console.log(`   Users: ${db.prepare('SELECT COUNT(*) as count FROM users').get().count}`);
 console.log(`   Members: ${db.prepare('SELECT COUNT(*) as count FROM members').get().count}`);
 console.log(`   Vouchers: ${db.prepare('SELECT COUNT(*) as count FROM vouchers').get().count}`);
 console.log(`   Point Transactions: ${db.prepare('SELECT COUNT(*) as count FROM point_transactions').get().count}`);
 console.log(`   Redeem Transactions: ${db.prepare('SELECT COUNT(*) as count FROM redeem_transactions').get().count}`);
+console.log('');
+console.log('🔐 Test User Credentials:');
+console.log('   Admin    - Username: admin    | Password: admin123');
+console.log('   Staff    - Username: staff1   | Password: staff123');
+console.log('   Member   - Username: member1  | Password: member123');
 console.log('');
 console.log('✅ Database initialization complete!');
 
