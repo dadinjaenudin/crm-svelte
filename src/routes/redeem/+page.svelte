@@ -1,7 +1,12 @@
 <script lang="ts">
-	import { members, vouchers, redeemTransactions, addRedeemTransaction, updateRedeemStatus } from '$lib/stores/data';
+	import { onMount } from 'svelte';
+	import api from '$lib/services/api';
 	import type { RedeemTransaction } from '$lib/types';
 	
+	let redeems: any[] = [];
+	let members: any[] = [];
+	let vouchers: any[] = [];
+	let loading = false;
 	let showModal = false;
 	let searchQuery = '';
 	let filterStatus: 'All' | 'Pending' | 'Completed' | 'Cancelled' | 'Used' = 'All';
@@ -11,18 +16,51 @@
 		voucherId: ''
 	};
 	
-	$: filteredRedeems = $redeemTransactions.filter(redeem => {
-		const matchSearch = redeem.memberName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-		                   redeem.voucherName.toLowerCase().includes(searchQuery.toLowerCase());
+	$: filteredRedeems = redeems.filter(redeem => {
+		const memberName = redeem.member_name || '';
+		const voucherName = redeem.voucher_name || '';
+		const matchSearch = memberName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+		                   voucherName.toLowerCase().includes(searchQuery.toLowerCase());
 		const matchStatus = filterStatus === 'All' || redeem.status === filterStatus;
 		return matchSearch && matchStatus;
-	}).sort((a, b) => new Date(b.redeemDate).getTime() - new Date(a.redeemDate).getTime());
+	}).sort((a, b) => new Date(b.redeem_date).getTime() - new Date(a.redeem_date).getTime());
 	
-	$: selectedMember = $members.find(m => m.id === formData.memberId);
-	$: selectedVoucher = $vouchers.find(v => v.id === formData.voucherId);
+	$: selectedMember = members.find(m => m.id === formData.memberId);
+	$: selectedVoucher = vouchers.find(v => v.id === formData.voucherId);
 	$: canRedeem = selectedMember && selectedVoucher && 
-	               selectedMember.totalPoints >= selectedVoucher.pointsCost &&
+	               selectedMember.total_points >= selectedVoucher.points_cost &&
 	               selectedVoucher.stock > 0;
+	
+	onMount(() => {
+		loadData();
+	});
+	
+	async function loadData() {
+		loading = true;
+		try {
+			const [redeemsRes, membersRes, vouchersRes] = await Promise.all([
+				api.getRedeemTransactions(filterStatus === 'All' ? undefined : filterStatus),
+				api.getMembers('Active'),
+				api.getVouchers('Active')
+			]);
+			
+			if (redeemsRes.success && redeemsRes.data) {
+				redeems = redeemsRes.data;
+			}
+			
+			if (membersRes.success && membersRes.data) {
+				members = membersRes.data;
+			}
+			
+			if (vouchersRes.success && vouchersRes.data) {
+				vouchers = vouchersRes.data;
+			}
+		} catch (err) {
+			console.error('Failed to load data:', err);
+		} finally {
+			loading = false;
+		}
+	}
 	
 	function openRedeemModal() {
 		formData = {
@@ -36,13 +74,13 @@
 		showModal = false;
 	}
 	
-	function handleRedeem() {
+	async function handleRedeem() {
 		if (!selectedMember || !selectedVoucher) {
 			alert('Silakan pilih member dan voucher!');
 			return;
 		}
 		
-		if (selectedMember.totalPoints < selectedVoucher.pointsCost) {
+		if (selectedMember.total_points < selectedVoucher.points_cost) {
 			alert('Poin member tidak mencukupi!');
 			return;
 		}
@@ -52,25 +90,41 @@
 			return;
 		}
 		
-		const transaction: RedeemTransaction = {
-			id: 'R' + String(Date.now()).slice(-6),
-			memberId: formData.memberId,
-			memberName: selectedMember.name,
-			voucherId: formData.voucherId,
-			voucherName: selectedVoucher.name,
-			pointsUsed: selectedVoucher.pointsCost,
-			redeemDate: new Date().toISOString().split('T')[0],
-			status: 'Completed'
-		};
-		
-		addRedeemTransaction(transaction);
-		closeModal();
+		loading = true;
+		try {
+			const transaction = {
+				id: 'R' + String(Date.now()).slice(-6),
+				memberId: formData.memberId,
+				voucherId: formData.voucherId,
+				pointsUsed: selectedVoucher.points_cost,
+				redeemDate: new Date().toISOString().split('T')[0],
+				status: 'Completed'
+			};
+			
+			await api.createRedeemTransaction(transaction);
+			await loadData();
+			closeModal();
+		} catch (err) {
+			alert('Gagal melakukan redeem!');
+			console.error(err);
+		} finally {
+			loading = false;
+		}
 	}
 	
-	function handleStatusChange(id: string, newStatus: RedeemTransaction['status']) {
+	async function handleStatusChange(id: string, newStatus: string) {
 		if (confirm(`Ubah status menjadi ${newStatus}?`)) {
-			const usedDate = newStatus === 'Used' ? new Date().toISOString().split('T')[0] : undefined;
-			updateRedeemStatus(id, newStatus, usedDate);
+			loading = true;
+			try {
+				const usedDate = newStatus === 'Used' ? new Date().toISOString().split('T')[0] : undefined;
+				await api.updateRedeemStatus(id, newStatus, usedDate);
+				await loadData();
+			} catch (err) {
+				alert('Gagal mengubah status!');
+				console.error(err);
+			} finally {
+				loading = false;
+			}
 		}
 	}
 	
@@ -92,9 +146,9 @@
 		}
 	}
 	
-	$: totalRedeems = $redeemTransactions.length;
-	$: completedRedeems = $redeemTransactions.filter(r => r.status === 'Completed').length;
-	$: usedRedeems = $redeemTransactions.filter(r => r.status === 'Used').length;
+	$: totalRedeems = redeems.length;
+	$: completedRedeems = redeems.filter(r => r.status === 'Completed').length;
+	$: usedRedeems = redeems.filter(r => r.status === 'Used').length;
 </script>
 
 <svelte:head>
@@ -199,22 +253,22 @@
 					{#each filteredRedeems as redeem}
 						<tr>
 							<td>{redeem.id}</td>
-							<td>{formatDate(redeem.redeemDate)}</td>
+							<td>{formatDate(redeem.redeem_date)}</td>
 							<td>
-								<strong>{redeem.memberName}</strong>
-								<div style="font-size: 12px; color: #6b7280;">{redeem.memberId}</div>
+								<strong>{redeem.member_name}</strong>
+								<div style="font-size: 12px; color: #6b7280;">{redeem.member_id}</div>
 							</td>
 							<td>
-								<strong>{redeem.voucherName}</strong>
-								<div style="font-size: 12px; color: #6b7280;">{redeem.voucherId}</div>
+								<strong>{redeem.voucher_name}</strong>
+								<div style="font-size: 12px; color: #6b7280;">{redeem.voucher_id}</div>
 							</td>
-							<td><strong>{redeem.pointsUsed.toLocaleString('id-ID')}</strong></td>
+							<td><strong>{redeem.points_used.toLocaleString('id-ID')}</strong></td>
 							<td>
 								<span class="badge badge-{getStatusBadge(redeem.status)}">
 									{redeem.status}
 								</span>
 							</td>
-							<td>{redeem.usedDate ? formatDate(redeem.usedDate) : '-'}</td>
+							<td>{redeem.used_date ? formatDate(redeem.used_date) : '-'}</td>
 							<td>
 								<div class="action-buttons">
 									{#if redeem.status === 'Completed'}
@@ -280,9 +334,9 @@
 					<label>Pilih Member *</label>
 					<select bind:value={formData.memberId} required>
 						<option value="">-- Pilih Member --</option>
-						{#each $members.filter(m => m.status === 'Active') as member}
+						{#each members.filter(m => m.status === 'Active') as member}
 							<option value={member.id}>
-								{member.name} ({member.id}) - {member.totalPoints.toLocaleString('id-ID')} poin
+								{member.name} ({member.id}) - {member.total_points.toLocaleString('id-ID')} poin
 							</option>
 						{/each}
 					</select>
@@ -297,11 +351,11 @@
 						</div>
 						<div class="info-row">
 							<span>Poin Tersedia:</span>
-							<strong class="points">{selectedMember.totalPoints.toLocaleString('id-ID')} poin</strong>
+							<strong class="points">{selectedMember.total_points.toLocaleString('id-ID')} poin</strong>
 						</div>
 						<div class="info-row">
 							<span>Tier:</span>
-							<span class="badge badge-success">{selectedMember.tierLevel}</span>
+							<span class="badge badge-success">{selectedMember.tier_level}</span>
 						</div>
 					</div>
 				{/if}
@@ -310,9 +364,9 @@
 					<label>Pilih Voucher *</label>
 					<select bind:value={formData.voucherId} required>
 						<option value="">-- Pilih Voucher --</option>
-						{#each $vouchers.filter(v => v.status === 'Active' && v.stock > 0) as voucher}
+						{#each vouchers.filter(v => v.status === 'Active' && v.stock > 0) as voucher}
 							<option value={voucher.id}>
-								{voucher.name} - {voucher.pointsCost.toLocaleString('id-ID')} poin (Stok: {voucher.stock})
+								{voucher.name} - {voucher.points_cost.toLocaleString('id-ID')} poin (Stok: {voucher.stock})
 							</option>
 						{/each}
 					</select>

@@ -1,34 +1,55 @@
 <script lang="ts">
-	import { vouchers, addVoucher, updateVoucher, deleteVoucher } from '$lib/stores/data';
+	import { onMount } from 'svelte';
+	import api from '$lib/services/api';
 	import type { Voucher } from '$lib/types';
 	
+	let vouchers: any[] = [];
+	let loading = false;
 	let showModal = false;
 	let editMode = false;
 	let searchQuery = '';
 	let filterStatus: 'All' | 'Active' | 'Inactive' | 'Expired' = 'All';
 	
-	let formData: Voucher = {
+	let formData: any = {
 		id: '',
 		code: '',
 		name: '',
 		description: '',
-		discountType: 'percentage',
-		discountValue: 0,
-		minPurchase: 0,
-		maxDiscount: 0,
-		pointsCost: 0,
+		type: 'percentage',
+		discount_value: 0,
+		points_cost: 0,
 		stock: 0,
-		validFrom: new Date().toISOString().split('T')[0],
-		validTo: '',
+		start_date: new Date().toISOString().split('T')[0],
+		end_date: '',
 		status: 'Active'
 	};
 	
-	$: filteredVouchers = $vouchers.filter(voucher => {
-		const matchSearch = voucher.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-		                   voucher.code.toLowerCase().includes(searchQuery.toLowerCase());
+	$: filteredVouchers = vouchers.filter(voucher => {
+		const matchSearch = (voucher.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+		                   (voucher.code || '').toLowerCase().includes(searchQuery.toLowerCase());
 		const matchStatus = filterStatus === 'All' || voucher.status === filterStatus;
 		return matchSearch && matchStatus;
 	});
+	
+	onMount(() => {
+		loadVouchers();
+	});
+	
+	async function loadVouchers() {
+		loading = true;
+		try {
+			const response = await api.getVouchers(
+				filterStatus === 'All' ? undefined : filterStatus
+			);
+			if (response.success && response.data) {
+				vouchers = response.data;
+			}
+		} catch (err) {
+			console.error('Failed to load vouchers:', err);
+		} finally {
+			loading = false;
+		}
+	}
 	
 	function openAddModal() {
 		editMode = false;
@@ -37,22 +58,32 @@
 			code: '',
 			name: '',
 			description: '',
-			discountType: 'percentage',
-			discountValue: 0,
-			minPurchase: 0,
-			maxDiscount: 0,
-			pointsCost: 0,
+			type: 'percentage',
+			discount_value: 0,
+			points_cost: 0,
 			stock: 0,
-			validFrom: new Date().toISOString().split('T')[0],
-			validTo: '',
+			start_date: new Date().toISOString().split('T')[0],
+			end_date: '',
 			status: 'Active'
 		};
 		showModal = true;
 	}
 	
-	function openEditModal(voucher: Voucher) {
+	function openEditModal(voucher: any) {
 		editMode = true;
-		formData = { ...voucher };
+		formData = {
+			id: voucher.id,
+			code: voucher.code,
+			name: voucher.name,
+			description: voucher.description,
+			type: voucher.type,
+			discount_value: voucher.discount_value,
+			points_cost: voucher.points_cost,
+			stock: voucher.stock,
+			start_date: voucher.start_date,
+			end_date: voucher.end_date,
+			status: voucher.status
+		};
 		showModal = true;
 	}
 	
@@ -60,18 +91,36 @@
 		showModal = false;
 	}
 	
-	function handleSubmit() {
-		if (editMode) {
-			updateVoucher(formData.id, formData);
-		} else {
-			addVoucher(formData);
+	async function handleSubmit() {
+		loading = true;
+		try {
+			if (editMode) {
+				await api.updateVoucher(formData.id, formData);
+			} else {
+				await api.createVoucher(formData);
+			}
+			await loadVouchers();
+			closeModal();
+		} catch (err) {
+			alert('Gagal menyimpan voucher!');
+			console.error(err);
+		} finally {
+			loading = false;
 		}
-		closeModal();
 	}
 	
-	function handleDelete(id: string) {
+	async function handleDelete(id: string) {
 		if (confirm('Apakah Anda yakin ingin menghapus voucher ini?')) {
-			deleteVoucher(id);
+			loading = true;
+			try {
+				await api.deleteVoucher(id);
+				await loadVouchers();
+			} catch (err) {
+				alert('Gagal menghapus voucher!');
+				console.error(err);
+			} finally {
+				loading = false;
+			}
 		}
 	}
 	
@@ -91,16 +140,16 @@
 		}).format(amount);
 	}
 	
-	function getDiscountDisplay(voucher: Voucher) {
-		if (voucher.discountType === 'percentage') {
-			return `${voucher.discountValue}%`;
+	function getDiscountDisplay(voucher: any) {
+		if (voucher.type === 'percentage') {
+			return `${voucher.discount_value}%`;
 		} else {
-			return formatCurrency(voucher.discountValue);
+			return formatCurrency(voucher.discount_value);
 		}
 	}
 	
-	$: activeVouchers = $vouchers.filter(v => v.status === 'Active').length;
-	$: totalStock = $vouchers.reduce((sum, v) => sum + v.stock, 0);
+	$: activeVouchers = vouchers.filter(v => v.status === 'Active').length;
+	$: totalStock = vouchers.reduce((sum, v) => sum + v.stock, 0);
 </script>
 
 <svelte:head>
@@ -124,7 +173,7 @@
 		
 		<div class="stat-card" style="border-left-color: #3b82f6;">
 			<h3>Total Voucher</h3>
-			<div class="value">{$vouchers.length}</div>
+			<div class="value">{vouchers.length}</div>
 		</div>
 		
 		<div class="stat-card" style="border-left-color: #f59e0b;">
@@ -210,20 +259,8 @@
 						</div>
 						
 						<div class="info-item">
-							<span class="info-label">Min. Pembelian:</span>
-							<span class="info-value">{formatCurrency(voucher.minPurchase)}</span>
-						</div>
-						
-						{#if voucher.maxDiscount}
-							<div class="info-item">
-								<span class="info-label">Max. Diskon:</span>
-								<span class="info-value">{formatCurrency(voucher.maxDiscount)}</span>
-							</div>
-						{/if}
-						
-						<div class="info-item">
 							<span class="info-label">Biaya Poin:</span>
-							<span class="info-value points-value">{voucher.pointsCost} poin</span>
+							<span class="info-value points-value">{voucher.points_cost} poin</span>
 						</div>
 						
 						<div class="info-item">
@@ -233,7 +270,7 @@
 						
 						<div class="info-item">
 							<span class="info-label">Berlaku:</span>
-							<span class="info-value">{formatDate(voucher.validFrom)} - {formatDate(voucher.validTo)}</span>
+							<span class="info-value">{formatDate(voucher.start_date)} - {formatDate(voucher.end_date)}</span>
 						</div>
 					</div>
 				</div>
@@ -282,7 +319,7 @@
 				
 				<div class="form-group">
 					<label>Tipe Diskon *</label>
-					<select bind:value={formData.discountType} required>
+					<select bind:value={formData.type} required>
 						<option value="percentage">Persentase (%)</option>
 						<option value="fixed">Nominal Tetap (Rp)</option>
 					</select>
@@ -292,32 +329,19 @@
 					<label>Nilai Diskon *</label>
 					<input 
 						type="number" 
-						bind:value={formData.discountValue} 
+						bind:value={formData.discount_value} 
 						required 
 						min="0"
-						placeholder={formData.discountType === 'percentage' ? 'Contoh: 20' : 'Contoh: 50000'}
+						placeholder={formData.type === 'percentage' ? 'Contoh: 20' : 'Contoh: 50000'}
 					/>
 					<small style="color: #6b7280;">
-						{formData.discountType === 'percentage' ? 'Masukkan angka tanpa simbol %' : 'Masukkan nominal dalam Rupiah'}
+						{formData.type === 'percentage' ? 'Masukkan angka tanpa simbol %' : 'Masukkan nominal dalam Rupiah'}
 					</small>
 				</div>
 				
 				<div class="form-group">
-					<label>Minimal Pembelian (Rp) *</label>
-					<input type="number" bind:value={formData.minPurchase} required min="0" />
-				</div>
-				
-				{#if formData.discountType === 'percentage'}
-					<div class="form-group">
-						<label>Maksimal Diskon (Rp)</label>
-						<input type="number" bind:value={formData.maxDiscount} min="0" />
-						<small style="color: #6b7280;">Opsional - batas maksimal potongan</small>
-					</div>
-				{/if}
-				
-				<div class="form-group">
 					<label>Biaya Poin *</label>
-					<input type="number" bind:value={formData.pointsCost} required min="0" />
+					<input type="number" bind:value={formData.points_cost} required min="0" />
 				</div>
 				
 				<div class="form-group">
@@ -327,12 +351,12 @@
 				
 				<div class="form-group">
 					<label>Berlaku Dari *</label>
-					<input type="date" bind:value={formData.validFrom} required />
+					<input type="date" bind:value={formData.start_date} required />
 				</div>
 				
 				<div class="form-group">
 					<label>Berlaku Sampai *</label>
-					<input type="date" bind:value={formData.validTo} required />
+					<input type="date" bind:value={formData.end_date} required />
 				</div>
 				
 				<div class="form-group">
