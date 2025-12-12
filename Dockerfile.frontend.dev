@@ -1,0 +1,37 @@
+# =============================================================================
+# Frontend Dockerfile - Development with Hot Reload
+# =============================================================================
+
+FROM node:20-alpine
+
+LABEL maintainer="CRM Team"
+LABEL description="CRM Frontend - Development"
+
+WORKDIR /app
+
+# Install development tools
+RUN apk add --no-cache curl
+
+# Copy package files
+COPY package*.json ./
+
+# Install ALL dependencies
+RUN npm install
+
+# Copy configuration files
+COPY svelte.config.js vite.config.js ./
+
+# Copy source code
+COPY src ./src
+COPY static ./static
+
+# Expose port
+EXPOSE 5173
+
+# Environment variables
+ENV NODE_ENV=development \
+    HOST=0.0.0.0 \
+    PORT=5173
+
+# Start Vite dev server with hot reload
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
