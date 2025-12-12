@@ -292,7 +292,7 @@
 <!-- Modal -->
 {#if showModal}
 	<div class="modal" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()} role="button" tabindex="0" aria-label="Close modal">
-		<div class="modal-content" on:click|stopPropagation on:keydown|stopPropagation role="dialog" aria-modal="true">
+		<div class="modal-content" on:click|stopPropagation on:keydown|stopPropagation role="dialog" aria-modal="true" tabindex="-1">
 			<div class="modal-header">
 				<h2>{editMode ? 'Edit Voucher' : 'Tambah Voucher Baru'}</h2>
 				<button class="close-btn" on:click={closeModal}>&times;</button>
