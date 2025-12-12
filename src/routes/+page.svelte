@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { members, pointTransactions, vouchers, redeemTransactions } from '$lib/stores/data';
 	import { onMount } from 'svelte';
+	import api from '$lib/services/api';
 	
 	let stats = {
 		totalMembers: 0,
@@ -13,37 +13,71 @@
 	
 	let recentTransactions: any[] = [];
 	let topMembers: any[] = [];
+	let loading = false;
 	
-	onMount(() => {
-		// Calculate stats
-		$members.forEach(member => {
-			stats.totalMembers++;
-			if (member.status === 'Active') stats.activeMembers++;
-			stats.totalPoints += member.totalPoints;
+	onMount(async () => {
+		loading = true;
+		try {
+			// Load all stats
+			const [memberStats, pointStats, voucherStats, redeemStats] = await Promise.all([
+				api.getMemberStats(),
+				api.getPointStats(),
+				api.getVoucherStats(),
+				api.getRedeemStats()
+			]);
 			
-			// Check if joined this month
-			const joinDate = new Date(member.joinDate);
-			const now = new Date();
-			if (joinDate.getMonth() === now.getMonth() && 
-			    joinDate.getFullYear() === now.getFullYear()) {
-				stats.monthlyNewMembers++;
+			if (memberStats.success && memberStats.data) {
+				stats.totalMembers = memberStats.data.totalMembers || 0;
+				stats.activeMembers = memberStats.data.activeMembers || 0;
+				stats.totalPoints = memberStats.data.totalPoints || 0;
 			}
-		});
-		
-		stats.totalVouchers = $vouchers.filter(v => v.status === 'Active').length;
-		stats.totalRedemptions = $redeemTransactions.length;
-		
-		// Get recent transactions (last 5)
-		recentTransactions = $pointTransactions
-			.slice()
-			.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-			.slice(0, 5);
-		
-		// Get top members by points
-		topMembers = $members
-			.slice()
-			.sort((a, b) => b.totalPoints - a.totalPoints)
-			.slice(0, 5);
+			
+			if (pointStats.success && pointStats.data) {
+				// Additional point stats if needed
+			}
+			
+			if (voucherStats.success && voucherStats.data) {
+				stats.totalVouchers = voucherStats.data.activeVouchers || 0;
+			}
+			
+			if (redeemStats.success && redeemStats.data) {
+				stats.totalRedemptions = redeemStats.data.totalRedeems || 0;
+			}
+			
+			// Load recent transactions
+			const pointsResponse = await api.getPointTransactions();
+			if (pointsResponse.success && pointsResponse.data) {
+				recentTransactions = pointsResponse.data
+					.slice()
+					.sort((a: any, b: any) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime())
+					.slice(0, 5)
+					.map((t: any) => ({
+						memberName: t.member_name || 'Unknown',
+						description: t.description || '',
+						date: t.transaction_date,
+						points: t.points
+					}));
+			}
+			
+			// Load top members
+			const membersResponse = await api.getMembers('Active');
+			if (membersResponse.success && membersResponse.data) {
+				topMembers = membersResponse.data
+					.slice()
+					.sort((a: any, b: any) => b.total_points - a.total_points)
+					.slice(0, 5)
+					.map((m: any) => ({
+						name: m.name,
+						email: m.email,
+						tierLevel: m.tier_level,
+						totalPoints: m.total_points
+					}));
+			}
+		} catch (err) {
+			console.error('Failed to load dashboard data:', err);
+		} finally {
+			loading = false;
+		}
 	});
 	
 	function formatDate(dateStr: string) {

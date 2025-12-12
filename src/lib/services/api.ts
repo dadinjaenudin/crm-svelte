@@ -76,6 +76,10 @@ class ApiService {
 	async getMemberStats() {
 		return this.request('/members/stats');
 	}
+	
+	async getTotalPoints() {
+		return this.getMemberStats();
+	}
 
 	// Point API
 	async getPointTransactions(type?: string, search?: string) {

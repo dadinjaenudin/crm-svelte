@@ -1,7 +1,11 @@
 <script lang="ts">
-	import { members, addMember, updateMember, deleteMember } from '$lib/stores/data';
+	import { onMount } from 'svelte';
+	import api from '$lib/services/api';
 	import type { Member } from '$lib/types';
 	
+	let members: Member[] = [];
+	let loading = false;
+	let error = '';
 	let showModal = false;
 	let editMode = false;
 	let searchQuery = '';
@@ -19,13 +23,36 @@
 		status: 'Active'
 	};
 	
-	$: filteredMembers = $members.filter(member => {
+	$: filteredMembers = members.filter(member => {
 		const matchSearch = member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
 		                   member.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
 		                   member.phone.includes(searchQuery);
 		const matchStatus = filterStatus === 'All' || member.status === filterStatus;
 		return matchSearch && matchStatus;
 	});
+	
+	onMount(() => {
+		loadMembers();
+	});
+	
+	async function loadMembers() {
+		loading = true;
+		error = '';
+		try {
+			const response = await api.getMembers(
+				filterStatus === 'All' ? undefined : filterStatus,
+				searchQuery || undefined
+			);
+			if (response.success && response.data) {
+				members = response.data;
+			}
+		} catch (err) {
+			error = 'Gagal memuat data members';
+			console.error(err);
+		} finally {
+			loading = false;
+		}
+	}
 	
 	function openAddModal() {
 		editMode = false;
@@ -53,18 +80,38 @@
 		showModal = false;
 	}
 	
-	function handleSubmit() {
-		if (editMode) {
-			updateMember(formData.id, formData);
-		} else {
-			addMember(formData);
+	async function handleSubmit() {
+		loading = true;
+		error = '';
+		try {
+			if (editMode) {
+				await api.updateMember(formData.id, formData);
+			} else {
+				await api.createMember(formData);
+			}
+			await loadMembers();
+			closeModal();
+		} catch (err) {
+			error = 'Gagal menyimpan data member';
+			console.error(err);
+		} finally {
+			loading = false;
 		}
-		closeModal();
 	}
 	
-	function handleDelete(id: string) {
+	async function handleDelete(id: string) {
 		if (confirm('Apakah Anda yakin ingin menghapus member ini?')) {
-			deleteMember(id);
+			loading = true;
+			error = '';
+			try {
+				await api.deleteMember(id);
+				await loadMembers();
+			} catch (err) {
+				error = 'Gagal menghapus member';
+				console.error(err);
+			} finally {
+				loading = false;
+			}
 		}
 	}
 	
