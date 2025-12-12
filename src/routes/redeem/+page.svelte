@@ -385,7 +385,7 @@
 						</div>
 						<div class="info-row">
 							<span>Biaya Poin:</span>
-							<strong class="points">{selectedVoucher.pointsCost.toLocaleString('id-ID')} poin</strong>
+							<strong class="points">{selectedVoucher.points_cost.toLocaleString('id-ID')} poin</strong>
 						</div>
 						<div class="info-row">
 							<span>Stok:</span>
@@ -395,7 +395,7 @@
 					
 					{#if !canRedeem}
 						<div class="alert alert-error">
-							{#if selectedMember && selectedMember.totalPoints < selectedVoucher.pointsCost}
+							{#if selectedMember && selectedMember.total_points < selectedVoucher.points_cost}
 								⚠️ Poin member tidak mencukupi untuk menukar voucher ini!
 							{:else if selectedVoucher.stock <= 0}
 								⚠️ Stok voucher habis!
