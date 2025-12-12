@@ -245,8 +245,8 @@
 
 <!-- Modal -->
 {#if showModal}
-	<div class="modal" on:click={closeModal}>
-		<div class="modal-content" on:click|stopPropagation>
+	<div class="modal" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()} role="button" tabindex="0" aria-label="Close modal">
+		<div class="modal-content" on:click|stopPropagation on:keydown|stopPropagation role="dialog" aria-modal="true">
 			<div class="modal-header">
 				<h2>{editMode ? 'Edit Member' : 'Tambah Member Baru'}</h2>
 				<button class="close-btn" on:click={closeModal}>&times;</button>
@@ -254,38 +254,38 @@
 			
 			<form on:submit|preventDefault={handleSubmit}>
 				<div class="form-group">
-					<label>ID Member</label>
-					<input type="text" bind:value={formData.id} disabled />
+					<label for="member-id">ID Member</label>
+					<input id="member-id" type="text" bind:value={formData.id} disabled />
 				</div>
 				
 				<div class="form-group">
-					<label>Nama Lengkap *</label>
-					<input type="text" bind:value={formData.name} required />
+					<label for="member-name">Nama Lengkap *</label>
+					<input id="member-name" type="text" bind:value={formData.name} required />
 				</div>
 				
 				<div class="form-group">
-					<label>Email *</label>
-					<input type="email" bind:value={formData.email} required />
+					<label for="member-email">Email *</label>
+					<input id="member-email" type="email" bind:value={formData.email} required />
 				</div>
 				
 				<div class="form-group">
-					<label>Nomor Telepon *</label>
-					<input type="tel" bind:value={formData.phone} required />
+					<label for="member-phone">Nomor Telepon *</label>
+					<input id="member-phone" type="tel" bind:value={formData.phone} required />
 				</div>
 				
 				<div class="form-group">
-					<label>Alamat</label>
-					<textarea bind:value={formData.address} rows="3"></textarea>
+					<label for="member-address">Alamat</label>
+					<textarea id="member-address" bind:value={formData.address} rows="3"></textarea>
 				</div>
 				
 				<div class="form-group">
-					<label>Tanggal Bergabung</label>
-					<input type="date" bind:value={formData.joinDate} required />
+					<label for="member-joindate">Tanggal Bergabung</label>
+					<input id="member-joindate" type="date" bind:value={formData.joinDate} required />
 				</div>
 				
 				<div class="form-group">
-					<label>Tier Level</label>
-					<select bind:value={formData.tierLevel}>
+					<label for="member-tier">Tier Level</label>
+					<select id="member-tier" bind:value={formData.tierLevel}>
 						<option value="Bronze">Bronze</option>
 						<option value="Silver">Silver</option>
 						<option value="Gold">Gold</option>
@@ -294,8 +294,8 @@
 				</div>
 				
 				<div class="form-group">
-					<label>Status</label>
-					<select bind:value={formData.status}>
+					<label for="member-status">Status</label>
+					<select id="member-status" bind:value={formData.status}>
 						<option value="Active">Active</option>
 						<option value="Inactive">Inactive</option>
 					</select>

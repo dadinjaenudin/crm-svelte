@@ -291,8 +291,8 @@
 
 <!-- Modal -->
 {#if showModal}
-	<div class="modal" on:click={closeModal}>
-		<div class="modal-content" on:click|stopPropagation>
+	<div class="modal" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()} role="button" tabindex="0" aria-label="Close modal">
+		<div class="modal-content" on:click|stopPropagation on:keydown|stopPropagation role="dialog" aria-modal="true">
 			<div class="modal-header">
 				<h2>{editMode ? 'Edit Voucher' : 'Tambah Voucher Baru'}</h2>
 				<button class="close-btn" on:click={closeModal}>&times;</button>
@@ -300,36 +300,37 @@
 			
 			<form on:submit|preventDefault={handleSubmit}>
 				<div class="form-group">
-					<label>ID Voucher</label>
-					<input type="text" bind:value={formData.id} disabled />
+					<label for="voucher-id">ID Voucher</label>
+					<input id="voucher-id" type="text" bind:value={formData.id} disabled />
 				</div>
 				
 				<div class="form-group">
-					<label>Kode Voucher *</label>
-					<input type="text" bind:value={formData.code} required placeholder="Contoh: DISKON20" />
+					<label for="voucher-code">Kode Voucher *</label>
+					<input id="voucher-code" type="text" bind:value={formData.code} required placeholder="Contoh: DISKON20" />
 				</div>
 				
 				<div class="form-group">
-					<label>Nama Voucher *</label>
-					<input type="text" bind:value={formData.name} required placeholder="Contoh: Diskon 20%" />
+					<label for="voucher-name">Nama Voucher *</label>
+					<input id="voucher-name" type="text" bind:value={formData.name} required placeholder="Contoh: Diskon 20%" />
 				</div>
 				
 				<div class="form-group">
-					<label>Deskripsi</label>
-					<textarea bind:value={formData.description} rows="2" placeholder="Deskripsi voucher"></textarea>
+					<label for="voucher-description">Deskripsi</label>
+					<textarea id="voucher-description" bind:value={formData.description} rows="2" placeholder="Deskripsi voucher"></textarea>
 				</div>
 				
 				<div class="form-group">
-					<label>Tipe Diskon *</label>
-					<select bind:value={formData.type} required>
+					<label for="voucher-type">Tipe Diskon *</label>
+					<select id="voucher-type" bind:value={formData.type} required>
 						<option value="percentage">Persentase (%)</option>
 						<option value="fixed">Nominal Tetap (Rp)</option>
 					</select>
 				</div>
 				
 				<div class="form-group">
-					<label>Nilai Diskon *</label>
+					<label for="voucher-discount">Nilai Diskon *</label>
 					<input 
+						id="voucher-discount"
 						type="number" 
 						bind:value={formData.discount_value} 
 						required 
@@ -342,28 +343,28 @@
 				</div>
 				
 				<div class="form-group">
-					<label>Biaya Poin *</label>
-					<input type="number" bind:value={formData.points_cost} required min="0" />
+					<label for="voucher-points">Biaya Poin *</label>
+					<input id="voucher-points" type="number" bind:value={formData.points_cost} required min="0" />
 				</div>
 				
 				<div class="form-group">
-					<label>Stok *</label>
-					<input type="number" bind:value={formData.stock} required min="0" />
+					<label for="voucher-stock">Stok *</label>
+					<input id="voucher-stock" type="number" bind:value={formData.stock} required min="0" />
 				</div>
 				
 				<div class="form-group">
-					<label>Berlaku Dari *</label>
-					<input type="date" bind:value={formData.start_date} required />
+					<label for="voucher-start">Berlaku Dari *</label>
+					<input id="voucher-start" type="date" bind:value={formData.start_date} required />
 				</div>
 				
 				<div class="form-group">
-					<label>Berlaku Sampai *</label>
-					<input type="date" bind:value={formData.end_date} required />
+					<label for="voucher-end">Berlaku Sampai *</label>
+					<input id="voucher-end" type="date" bind:value={formData.end_date} required />
 				</div>
 				
 				<div class="form-group">
-					<label>Status</label>
-					<select bind:value={formData.status}>
+					<label for="voucher-status">Status</label>
+					<select id="voucher-status" bind:value={formData.status}>
 						<option value="Active">Active</option>
 						<option value="Inactive">Inactive</option>
 						<option value="Expired">Expired</option>

@@ -272,8 +272,8 @@
 
 <!-- Modal -->
 {#if showModal}
-	<div class="modal" on:click={closeModal}>
-		<div class="modal-content" on:click|stopPropagation>
+	<div class="modal" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()} role="button" tabindex="0" aria-label="Close modal">
+		<div class="modal-content" on:click|stopPropagation on:keydown|stopPropagation role="dialog" aria-modal="true">
 			<div class="modal-header">
 				<h2>Tambah Transaksi Poin</h2>
 				<button class="close-btn" on:click={closeModal}>&times;</button>
@@ -281,8 +281,8 @@
 			
 			<form on:submit|preventDefault={handleSubmit}>
 				<div class="form-group">
-					<label>Pilih Member *</label>
-					<select bind:value={formData.memberId} required>
+					<label for="point-member">Pilih Member *</label>
+					<select id="point-member" bind:value={formData.memberId} required>
 						<option value="">-- Pilih Member --</option>
 						{#each members as member}
 							<option value={member.id}>
@@ -293,8 +293,8 @@
 				</div>
 				
 				<div class="form-group">
-					<label>Tipe Transaksi *</label>
-					<select bind:value={formData.type} required>
+					<label for="point-type">Tipe Transaksi *</label>
+					<select id="point-type" bind:value={formData.type} required>
 						<option value="earn">Dapat Poin</option>
 						<option value="redeem">Redeem</option>
 						<option value="expire">Kadaluarsa</option>
@@ -303,8 +303,9 @@
 				</div>
 				
 				<div class="form-group">
-					<label>Jumlah Poin *</label>
+					<label for="point-amount">Jumlah Poin *</label>
 					<input 
+						id="point-amount"
 						type="number" 
 						bind:value={formData.points} 
 						min="1"
@@ -321,8 +322,9 @@
 				</div>
 				
 				<div class="form-group">
-					<label>Deskripsi *</label>
+					<label for="point-description">Deskripsi *</label>
 					<textarea 
+						id="point-description"
 						bind:value={formData.description} 
 						rows="3" 
 						required

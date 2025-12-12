@@ -322,8 +322,8 @@
 
 <!-- Modal -->
 {#if showModal}
-	<div class="modal" on:click={closeModal}>
-		<div class="modal-content" on:click|stopPropagation>
+	<div class="modal" on:click={closeModal} on:keydown={(e) => e.key === 'Escape' && closeModal()} role="button" tabindex="0" aria-label="Close modal">
+		<div class="modal-content" on:click|stopPropagation on:keydown|stopPropagation role="dialog" aria-modal="true">
 			<div class="modal-header">
 				<h2>Proses Redeem Voucher</h2>
 				<button class="close-btn" on:click={closeModal}>&times;</button>
@@ -331,8 +331,8 @@
 			
 			<form on:submit|preventDefault={handleRedeem}>
 				<div class="form-group">
-					<label>Pilih Member *</label>
-					<select bind:value={formData.memberId} required>
+					<label for="redeem-member">Pilih Member *</label>
+					<select id="redeem-member" bind:value={formData.memberId} required>
 						<option value="">-- Pilih Member --</option>
 						{#each members.filter(m => m.status === 'Active') as member}
 							<option value={member.id}>
@@ -361,8 +361,8 @@
 				{/if}
 				
 				<div class="form-group">
-					<label>Pilih Voucher *</label>
-					<select bind:value={formData.voucherId} required>
+					<label for="redeem-voucher">Pilih Voucher *</label>
+					<select id="redeem-voucher" bind:value={formData.voucherId} required>
 						<option value="">-- Pilih Voucher --</option>
 						{#each vouchers.filter(v => v.status === 'Active' && v.stock > 0) as voucher}
 							<option value={voucher.id}>
