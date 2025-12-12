@@ -1,24 +1,64 @@
 <script lang="ts">
-	import { members, pointTransactions, addPointTransaction } from '$lib/stores/data';
-	import type { PointTransaction } from '$lib/types';
+	import { onMount } from 'svelte';
+	import api from '$lib/services/api';
+	import type { PointTransaction, Member } from '$lib/types';
 	
+	let transactions: any[] = [];
+	let members: Member[] = [];
+	let loading = false;
 	let showModal = false;
 	let searchQuery = '';
 	let filterType: 'All' | 'earn' | 'redeem' | 'expire' | 'adjustment' = 'All';
 	
 	let formData = {
 		memberId: '',
-		type: 'earn' as PointTransaction['type'],
+		type: 'earn',
 		points: 0,
 		description: ''
 	};
 	
-	$: filteredTransactions = $pointTransactions.filter(transaction => {
-		const matchSearch = transaction.memberName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-		                   transaction.description.toLowerCase().includes(searchQuery.toLowerCase());
+	$: filteredTransactions = transactions.filter(transaction => {
+		const matchSearch = (transaction.member_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+		                   (transaction.description || '').toLowerCase().includes(searchQuery.toLowerCase());
 		const matchType = filterType === 'All' || transaction.type === filterType;
 		return matchSearch && matchType;
-	}).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+	}).sort((a, b) => new Date(b.transaction_date || b.date).getTime() - new Date(a.transaction_date || a.date).getTime());
+	
+	onMount(() => {
+		loadData();
+	});
+	
+	async function loadData() {
+		loading = true;
+		try {
+			const [transactionsRes, membersRes] = await Promise.all([
+				api.getPointTransactions(filterType === 'All' ? undefined : filterType),
+				api.getMembers('Active')
+			]);
+			
+			if (transactionsRes.success && transactionsRes.data) {
+				transactions = transactionsRes.data;
+			}
+			
+			if (membersRes.success && membersRes.data) {
+				members = membersRes.data.map((m: any) => ({
+					id: m.id,
+					name: m.name,
+					email: m.email,
+					phone: m.phone,
+					address: m.address,
+					joinDate: m.join_date,
+					totalPoints: m.total_points,
+					tierLevel: m.tier_level,
+					status: m.status
+				}));
+			}
+		} catch (err) {
+			console.error('Failed to load data:', err);
+		} finally {
+			loading = false;
+		}
+	}
 	
 	function openAddModal() {
 		formData = {
@@ -34,30 +74,33 @@
 		showModal = false;
 	}
 	
-	function handleSubmit() {
-		const member = $members.find(m => m.id === formData.memberId);
+	async function handleSubmit() {
+		const member = members.find(m => m.id === formData.memberId);
 		if (!member) {
 			alert('Member tidak ditemukan!');
 			return;
 		}
 		
-		let points = formData.points;
-		if (formData.type === 'redeem' || formData.type === 'expire') {
-			points = -Math.abs(points);
+		loading = true;
+		try {
+			const transaction = {
+				id: 'PT' + String(Date.now()).slice(-6),
+				memberId: formData.memberId,
+				type: formData.type,
+				points: formData.points,
+				description: formData.description,
+				date: new Date().toISOString().split('T')[0]
+			};
+			
+			await api.createPointTransaction(transaction);
+			await loadData();
+			closeModal();
+		} catch (err) {
+			alert('Gagal menambahkan transaksi!');
+			console.error(err);
+		} finally {
+			loading = false;
 		}
-		
-		const transaction: PointTransaction = {
-			id: 'PT' + String(Date.now()).slice(-6),
-			memberId: formData.memberId,
-			memberName: member.name,
-			type: formData.type,
-			points: points,
-			description: formData.description,
-			date: new Date().toISOString().split('T')[0]
-		};
-		
-		addPointTransaction(transaction);
-		closeModal();
 	}
 	
 	function formatDate(dateStr: string) {
@@ -88,11 +131,11 @@
 		}
 	}
 	
-	$: totalPointsEarned = $pointTransactions
+	$: totalPointsEarned = transactions
 		.filter(t => t.points > 0)
 		.reduce((sum, t) => sum + t.points, 0);
 	
-	$: totalPointsRedeemed = Math.abs($pointTransactions
+	$: totalPointsRedeemed = Math.abs(transactions
 		.filter(t => t.points < 0)
 		.reduce((sum, t) => sum + t.points, 0));
 </script>
@@ -123,7 +166,7 @@
 		
 		<div class="stat-card" style="border-left-color: #3b82f6;">
 			<h3>Total Transaksi</h3>
-			<div class="value">{$pointTransactions.length}</div>
+			<div class="value">{transactions.length}</div>
 		</div>
 	</div>
 	
@@ -197,10 +240,10 @@
 					{#each filteredTransactions as transaction}
 						<tr>
 							<td>{transaction.id}</td>
-							<td>{formatDate(transaction.date)}</td>
+							<td>{formatDate(transaction.transaction_date || transaction.date)}</td>
 							<td>
-								<strong>{transaction.memberName}</strong>
-								<div style="font-size: 12px; color: #6b7280;">{transaction.memberId}</div>
+								<strong>{transaction.member_name || transaction.memberName}</strong>
+								<div style="font-size: 12px; color: #6b7280;">{transaction.member_id || transaction.memberId}</div>
 							</td>
 							<td>
 								<span class="badge badge-{getTypeBadge(transaction.type)}">
@@ -241,7 +284,7 @@
 					<label>Pilih Member *</label>
 					<select bind:value={formData.memberId} required>
 						<option value="">-- Pilih Member --</option>
-						{#each $members as member}
+						{#each members as member}
 							<option value={member.id}>
 								{member.name} ({member.id}) - {member.totalPoints.toLocaleString('id-ID')} poin
 							</option>

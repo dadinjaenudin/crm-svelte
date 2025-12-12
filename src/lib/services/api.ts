@@ -20,7 +20,9 @@ class ApiService {
 		options: RequestInit = {}
 	): Promise<ApiResponse<T>> {
 		try {
-			const response = await fetch(`${this.baseUrl}${endpoint}`, {
+			const url = `${this.baseUrl}${endpoint}`;
+			
+			const response = await fetch(url, {
 				...options,
 				headers: {
 					'Content-Type': 'application/json',
