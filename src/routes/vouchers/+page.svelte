@@ -141,10 +141,12 @@
 	}
 	
 	function getDiscountDisplay(voucher: any) {
-		if (voucher.type === 'percentage') {
-			return `${voucher.discount_value}%`;
+		const type = voucher.type || voucher.discount_type;
+		const value = voucher.discount_value;
+		if (type === 'percentage') {
+			return `${value}%`;
 		} else {
-			return formatCurrency(voucher.discount_value);
+			return formatCurrency(value);
 		}
 	}
 	
@@ -270,7 +272,7 @@
 						
 						<div class="info-item">
 							<span class="info-label">Berlaku:</span>
-							<span class="info-value">{formatDate(voucher.start_date)} - {formatDate(voucher.end_date)}</span>
+							<span class="info-value">{formatDate(voucher.start_date || voucher.valid_from)} - {formatDate(voucher.end_date || voucher.valid_to)}</span>
 						</div>
 					</div>
 				</div>
