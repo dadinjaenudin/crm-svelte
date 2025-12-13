@@ -1,2 +1,21 @@
-# urls.py
-# Content placeholder: AUTH_URLS
+"""
+Authentication URLs
+"""
+from django.urls import path
+from rest_framework_simplejwt.views import TokenRefreshView
+from .views import (
+    RegisterView,
+    CustomTokenObtainPairView,
+    get_current_user,
+    update_profile,
+    change_password,
+)
+
+urlpatterns = [
+    path('register/', RegisterView.as_view(), name='register'),
+    path('login/', CustomTokenObtainPairView.as_view(), name='login'),
+    path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('me/', get_current_user, name='current_user'),
+    path('profile/', update_profile, name='update_profile'),
+    path('change-password/', change_password, name='change_password'),
+]
